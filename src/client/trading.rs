@@ -4,7 +4,7 @@ use crate::orders::OrderBuilder;
 use crate::signing::EthSigner;
 use crate::types::{
     ApiCreds, CreateOrderOptions, ExtraOrderArgs, MarketOrderArgs, OpenOrder, OpenOrderParams,
-    OpenOrdersResponse, OrderArgs, OrderBookSummary, OrderId, OrderType, PostOrder,
+    OpenOrdersResponse, OrderArgs, OrderBookSummary, OrderId, OrderType, PostOrder, Side,
     SignedOrderRequest, TradeParams,
 };
 
@@ -70,7 +70,7 @@ impl TradingClient {
     /// Create a market order (local operation, not posted)
     ///
     /// # Arguments
-    /// * `order_args` - Market order arguments (token_id, amount)
+    /// * `order_args` - Market order arguments (token_id, amount, side)
     /// * `order_book` - The order book to calculate price from
     /// * `extras` - Optional extra order parameters (defaults to ExtraOrderArgs::default())
     /// * `options` - Order options (tick_size, neg_risk must be provided)
@@ -84,10 +84,16 @@ impl TradingClient {
         let default_extras = ExtraOrderArgs::default();
         let extras = extras.unwrap_or(&default_extras);
 
+        // Use asks for BUY (taking from sellers), bids for SELL (taking from buyers)
+        let book_side = match order_args.side {
+            Side::Buy => &order_book.asks,
+            Side::Sell => &order_book.bids,
+        };
+
         // Calculate market price from order book
         let price = self
             .order_builder
-            .calculate_market_price(&order_book.asks, order_args.amount)?;
+            .calculate_market_price(book_side, order_args.amount)?;
 
         self.order_builder
             .create_market_order(self.chain_id, order_args, price, extras, options)

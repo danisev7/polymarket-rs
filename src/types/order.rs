@@ -30,13 +30,15 @@ impl OrderArgs {
 pub struct MarketOrderArgs {
     pub token_id: String,
     pub amount: Decimal,
+    pub side: Side,
 }
 
 impl MarketOrderArgs {
-    pub fn new(token_id: impl Into<String>, amount: Decimal) -> Self {
+    pub fn new(token_id: impl Into<String>, amount: Decimal, side: Side) -> Self {
         Self {
             token_id: token_id.into(),
             amount,
+            side,
         }
     }
 }
