@@ -22,7 +22,10 @@ async fn main() -> Result<()> {
 
     // Step 1: Create or derive API credentials
     println!("\n1. Creating/deriving API credentials...");
-    let auth_client = AuthenticatedClient::new(host, signer.clone(), chain_id, None);
+
+    // For EOA wallets, pass None for the funder parameter
+    // For PolyProxy wallets, pass Some(proxy_wallet_address)
+    let auth_client = AuthenticatedClient::new(host, signer.clone(), chain_id, None, None);
 
     let api_creds = auth_client.create_or_derive_api_key().await?;
     println!("API Key: {}", api_creds.api_key);
@@ -55,8 +58,7 @@ async fn main() -> Result<()> {
     // Step 4: Create a limit order (example - NOT posted)
     println!("\n4. Creating a limit order (example)...");
 
-    // Replace with actual token ID
-    let token_id = "21742633143463906290569050155826241533067272736897614950488156847949938836455";
+    let token_id = "109648317055340591503076024421581448189531885907475125926203413622318314876012";
 
     let _order_args = OrderArgs::new(
         token_id,
@@ -94,6 +96,44 @@ async fn main() -> Result<()> {
     println!("\n✓ Example completed successfully!");
     println!("\nNOTE: This example did not post any actual orders.");
     println!("Uncomment the posting code to execute real trades.");
+
+    // ========================================================================
+    // POLYPROXY WALLET EXAMPLE
+    // ========================================================================
+    // For PolyProxy wallets (email/Magic wallets), use this setup:
+    //
+    // use alloy_primitives::Address;
+    //
+    // let proxy_wallet_address = Address::from_str("0xYourProxyWalletAddress")?;
+    //
+    // // API authentication uses the EOA signer
+    // let auth_client = AuthenticatedClient::new(
+    //     host,
+    //     signer.clone(),
+    //     chain_id,
+    //     None,
+    //     Some(proxy_wallet_address),  // Pass proxy wallet address
+    // );
+    //
+    // let api_creds = auth_client.create_or_derive_api_key().await?;
+    //
+    // // OrderBuilder uses PolyProxy signature type and proxy wallet as funder
+    // let order_builder = OrderBuilder::new(
+    //     signer.clone(),               // EOA signer (no Box::new!)
+    //     Some(SignatureType::PolyProxy),
+    //     Some(proxy_wallet_address),   // Proxy wallet holds funds
+    // );
+    //
+    // let trading_client = TradingClient::new(
+    //     host,
+    //     signer,
+    //     chain_id,
+    //     api_creds,
+    //     order_builder,
+    // );
+    //
+    // // PolyProxy wallets have automatic allowance management
+    // // No manual ERC-20 approvals needed!
 
     Ok(())
 }

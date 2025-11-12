@@ -58,6 +58,7 @@ mod http;
 mod utils;
 
 // Re-export commonly used types
+pub use alloy_primitives::Address;
 pub use alloy_signer::k256;
 pub use alloy_signer_local::PrivateKeySigner;
 pub use error::{Error, Result};

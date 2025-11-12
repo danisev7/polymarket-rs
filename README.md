@@ -86,7 +86,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         host,
         signer.clone(),
         chain_id,
-        None,
+        None,  // api_creds (will be created)
+        None,  // funder (None for EOA wallets)
     );
 
     let api_creds = auth_client.create_or_derive_api_key().await?;
@@ -132,6 +133,71 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
+
+### PolyProxy Wallets (Email/Magic Wallets)
+
+For PolyProxy wallets (like email-based Magic wallets), you need to specify both the EOA signer and the proxy wallet address:
+
+```rust
+use alloy_primitives::Address;
+use alloy_signer_local::PrivateKeySigner;
+use polymarket_rs::{
+    AuthenticatedClient, TradingClient, OrderBuilder,
+    OrderArgs, Side, OrderType, SignatureType,
+    CreateOrderOptions,
+};
+use rust_decimal::Decimal;
+use std::str::FromStr;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let private_key = std::env::var("PRIVATE_KEY")?;
+    let signer = PrivateKeySigner::from_str(&private_key)?;
+
+    // Your proxy wallet address (holds the funds)
+    let proxy_wallet_address = Address::from_str("0xYourProxyWalletAddress")?;
+
+    let chain_id = 137;
+    let host = "https://clob.polymarket.com";
+
+    // API authentication uses the EOA signer
+    let auth_client = AuthenticatedClient::new(
+        host,
+        signer.clone(),
+        chain_id,
+        None,
+        Some(proxy_wallet_address),  // Pass proxy wallet address
+    );
+
+    let api_creds = auth_client.create_or_derive_api_key().await?;
+
+    // OrderBuilder uses PolyProxy signature type and proxy wallet as funder
+    let order_builder = OrderBuilder::new(
+        signer.clone(),               // EOA signer (no Box::new!)
+        Some(SignatureType::PolyProxy),
+        Some(proxy_wallet_address),   // Proxy wallet holds funds
+    );
+
+    let trading_client = TradingClient::new(
+        host,
+        signer,
+        chain_id,
+        api_creds,
+        order_builder,
+    );
+
+    // PolyProxy wallets have automatic allowance management
+    // No manual ERC-20 approvals needed!
+
+    Ok(())
+}
+```
+
+**Key Points for PolyProxy:**
+- `signer`: Your EOA private key (delegated signer for API authentication)
+- `funder`: Your proxy wallet address (holds the actual funds)
+- `SignatureType::PolyProxy`: Tells the API to validate the delegation
+- **No manual allowances needed** - the proxy contract manages approvals automatically
 
 ### Client Types
 

@@ -2,17 +2,21 @@ use crate::error::{Error, Result};
 use crate::http::{create_l1_headers, create_l2_headers, HttpClient};
 use crate::signing::EthSigner;
 use crate::types::{ApiCreds, ApiKeysResponse, BalanceAllowanceParams};
-use alloy_primitives::U256;
+use alloy_primitives::{Address, U256};
 
 /// Client for authenticated operations
 ///
 /// This client handles operations that require authentication,
 /// such as API key management and account queries.
+///
+/// For PolyProxy wallets, the signer is used for API authentication
+/// while the funder address is used as the order maker.
 pub struct AuthenticatedClient {
     http_client: HttpClient,
     signer: Box<dyn EthSigner>,
     chain_id: u64,
     api_creds: Option<ApiCreds>,
+    funder: Option<Address>,
 }
 
 impl AuthenticatedClient {
@@ -20,20 +24,30 @@ impl AuthenticatedClient {
     ///
     /// # Arguments
     /// * `host` - The base URL for the API
-    /// * `signer` - The Ethereum signer
+    /// * `signer` - The Ethereum signer (used for API authentication)
     /// * `chain_id` - The chain ID (137 for Polygon, 80002 for Amoy testnet)
     /// * `api_creds` - Optional API credentials for L2 operations
+    /// * `funder` - Optional funder address (for PolyProxy wallets, this is the proxy wallet address)
+    ///
+    /// # PolyProxy Wallets
+    /// For PolyProxy wallets:
+    /// - `signer`: Your EOA private key (delegated signer)
+    /// - `funder`: Your proxy wallet address (holds the funds)
+    /// - API authentication uses the signer address
+    /// - Orders are made by the funder address
     pub fn new(
         host: impl Into<String>,
         signer: impl EthSigner + 'static,
         chain_id: u64,
         api_creds: Option<ApiCreds>,
+        funder: Option<Address>,
     ) -> Self {
         Self {
             http_client: HttpClient::new(host),
             signer: Box::new(signer),
             chain_id,
             api_creds,
+            funder,
         }
     }
 
@@ -177,5 +191,13 @@ impl AuthenticatedClient {
     /// Get the signer's address
     pub fn get_address(&self) -> String {
         format!("{:?}", self.signer.address())
+    }
+
+    /// Get the funder address (for PolyProxy wallets)
+    ///
+    /// Returns the proxy wallet address if set, otherwise None.
+    /// For EOA wallets, this should return None.
+    pub fn get_funder(&self) -> Option<Address> {
+        self.funder
     }
 }
