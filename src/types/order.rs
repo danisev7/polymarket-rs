@@ -1,0 +1,256 @@
+use super::enums::{OrderType, Side};
+use alloy_primitives::U256;
+use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
+
+const ZERO_ADDRESS: &str = "0x0000000000000000000000000000000000000000";
+
+/// Arguments for creating a limit order
+#[derive(Debug, Clone)]
+pub struct OrderArgs {
+    pub token_id: String,
+    pub price: Decimal,
+    pub size: Decimal,
+    pub side: Side,
+}
+
+impl OrderArgs {
+    pub fn new(token_id: impl Into<String>, price: Decimal, size: Decimal, side: Side) -> Self {
+        Self {
+            token_id: token_id.into(),
+            price,
+            size,
+            side,
+        }
+    }
+}
+
+/// Arguments for creating a market order
+#[derive(Debug, Clone)]
+pub struct MarketOrderArgs {
+    pub token_id: String,
+    pub amount: Decimal,
+}
+
+impl MarketOrderArgs {
+    pub fn new(token_id: impl Into<String>, amount: Decimal) -> Self {
+        Self {
+            token_id: token_id.into(),
+            amount,
+        }
+    }
+}
+
+/// Extra optional arguments for order creation
+#[derive(Debug, Clone)]
+pub struct ExtraOrderArgs {
+    pub fee_rate_bps: u32,
+    pub nonce: U256,
+    pub taker: String,
+}
+
+impl Default for ExtraOrderArgs {
+    fn default() -> Self {
+        Self {
+            fee_rate_bps: 0,
+            nonce: U256::ZERO,
+            taker: ZERO_ADDRESS.into(),
+        }
+    }
+}
+
+impl ExtraOrderArgs {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn fee_rate_bps(mut self, fee_rate_bps: u32) -> Self {
+        self.fee_rate_bps = fee_rate_bps;
+        self
+    }
+
+    pub fn nonce(mut self, nonce: U256) -> Self {
+        self.nonce = nonce;
+        self
+    }
+
+    pub fn taker(mut self, taker: impl Into<String>) -> Self {
+        self.taker = taker.into();
+        self
+    }
+}
+
+/// Options for creating orders
+#[derive(Debug, Clone, Default)]
+pub struct CreateOrderOptions {
+    pub tick_size: Option<Decimal>,
+    pub neg_risk: Option<bool>,
+}
+
+impl CreateOrderOptions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn tick_size(mut self, tick_size: Decimal) -> Self {
+        self.tick_size = Some(tick_size);
+        self
+    }
+
+    pub fn neg_risk(mut self, neg_risk: bool) -> Self {
+        self.neg_risk = Some(neg_risk);
+        self
+    }
+}
+
+/// Signed order request ready to be posted
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignedOrderRequest {
+    pub salt: U256,
+    pub maker: String,
+    pub signer: String,
+    pub taker: String,
+    #[serde(rename = "tokenId")]
+    pub token_id: String,
+    #[serde(rename = "makerAmount")]
+    pub maker_amount: String,
+    #[serde(rename = "takerAmount")]
+    pub taker_amount: String,
+    pub expiration: String,
+    pub nonce: String,
+    #[serde(rename = "feeRateBps")]
+    pub fee_rate_bps: String,
+    pub side: Side,
+    #[serde(rename = "signatureType")]
+    pub signature_type: u8,
+    pub signature: String,
+}
+
+/// Order to be posted to the API
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PostOrder {
+    order: SignedOrderRequest,
+    owner: String,
+    order_type: OrderType,
+}
+
+impl PostOrder {
+    pub fn new(order: SignedOrderRequest, owner: String, order_type: OrderType) -> Self {
+        Self {
+            order,
+            owner,
+            order_type,
+        }
+    }
+}
+
+/// Open order from the API
+#[derive(Debug, Deserialize)]
+pub struct OpenOrder {
+    pub associate_trades: Vec<String>,
+    pub id: String,
+    pub status: String,
+    pub market: String,
+    #[serde(with = "rust_decimal::serde::str")]
+    pub original_size: Decimal,
+    pub outcome: String,
+    pub maker_address: String,
+    pub owner: String,
+    #[serde(with = "rust_decimal::serde::str")]
+    pub price: Decimal,
+    pub side: Side,
+    #[serde(with = "rust_decimal::serde::str")]
+    pub size_matched: Decimal,
+    pub asset_id: String,
+    #[serde(deserialize_with = "super::serde_helpers::deserialize_number_from_string")]
+    pub expiration: u64,
+    #[serde(rename = "type")]
+    pub order_type: OrderType,
+    #[serde(deserialize_with = "super::serde_helpers::deserialize_number_from_string")]
+    pub created_at: u64,
+}
+
+/// Parameters for querying open orders
+#[derive(Debug, Clone, Default)]
+pub struct OpenOrderParams {
+    pub id: Option<String>,
+    pub asset_id: Option<String>,
+    pub market: Option<String>,
+}
+
+impl OpenOrderParams {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    pub fn asset_id(mut self, asset_id: impl Into<String>) -> Self {
+        self.asset_id = Some(asset_id.into());
+        self
+    }
+
+    pub fn market(mut self, market: impl Into<String>) -> Self {
+        self.market = Some(market.into());
+        self
+    }
+
+    pub fn to_query_params(&self) -> Vec<(&str, &String)> {
+        let mut params = Vec::with_capacity(3);
+
+        if let Some(ref id) = self.id {
+            params.push(("id", id));
+        }
+
+        if let Some(ref asset_id) = self.asset_id {
+            params.push(("asset_id", asset_id));
+        }
+
+        if let Some(ref market) = self.market {
+            params.push(("market", market));
+        }
+
+        params
+    }
+}
+
+/// Order book summary with bids and asks
+#[derive(Debug, Deserialize)]
+pub struct OrderBookSummary {
+    pub market: String,
+    pub asset_id: String,
+    pub hash: String,
+    #[serde(deserialize_with = "super::serde_helpers::deserialize_number_from_string")]
+    pub timestamp: u64,
+    pub bids: Vec<OrderSummary>,
+    pub asks: Vec<OrderSummary>,
+}
+
+/// Price and size at an order book level
+#[derive(Debug, Deserialize)]
+pub struct OrderSummary {
+    #[serde(with = "rust_decimal::serde::str")]
+    pub price: Decimal,
+    #[serde(with = "rust_decimal::serde::str")]
+    pub size: Decimal,
+}
+
+/// Parameters for querying order book
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BookParams {
+    pub token_id: String,
+    pub side: Side,
+}
+
+impl BookParams {
+    pub fn new(token_id: impl Into<String>, side: Side) -> Self {
+        Self {
+            token_id: token_id.into(),
+            side,
+        }
+    }
+}
