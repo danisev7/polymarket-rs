@@ -141,11 +141,19 @@ impl PostOrder {
     }
 }
 
+/// Response for open orders query
+#[derive(Debug, Deserialize)]
+pub struct OpenOrdersResponse {
+    pub limit: u64,
+    pub count: u64,
+    pub next_cursor: Option<String>,
+    pub data: Vec<OpenOrder>,
+}
+
 /// Open order from the API
 #[derive(Debug, Deserialize)]
 pub struct OpenOrder {
     pub associate_trades: Vec<String>,
-    pub id: String,
     pub status: String,
     pub market: String,
     #[serde(with = "rust_decimal::serde::str")]
@@ -161,7 +169,6 @@ pub struct OpenOrder {
     pub asset_id: String,
     #[serde(deserialize_with = "super::serde_helpers::deserialize_number_from_string")]
     pub expiration: u64,
-    #[serde(rename = "type")]
     pub order_type: OrderType,
     #[serde(deserialize_with = "super::serde_helpers::deserialize_number_from_string")]
     pub created_at: u64,
