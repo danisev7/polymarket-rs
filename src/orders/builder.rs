@@ -64,7 +64,7 @@ impl OrderBuilder {
         side: Side,
         size: Decimal,
         price: Decimal,
-        round_config: &super::rounding::RoundConfig,
+        round_config: &RoundConfig,
     ) -> (u64, u64) {
         let raw_price = price.round_dp_with_strategy(round_config.price, MidpointTowardZero);
 
