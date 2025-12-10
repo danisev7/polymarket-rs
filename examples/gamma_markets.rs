@@ -103,9 +103,7 @@ async fn main() -> Result<()> {
     match client.get_series().await {
         Ok(series) => {
             if let Some(s) = series.first() {
-                if let Some(title) = &s.title {
-                    println!("   Sample series: {}", title);
-                }
+                println!("   Sample series: {:?}", s.title);
             }
         }
         Err(e) => {
@@ -117,10 +115,8 @@ async fn main() -> Result<()> {
     println!("\n8. Fetching specific series by ID (10192)...");
     match client.get_series_by_id("10192").await {
         Ok(series) => {
-            if let Some(title) = &series.title {
-                println!("   - Title: {}", title);
-            }
-            // println!("   - Events: {}", series.events.len());
+            println!("   - Title: {:?}", series.title);
+            println!("   - Events: {}", series.events.len());
         }
         Err(e) => {
             println!("Get series by ID error: {}", e);

@@ -41,10 +41,9 @@ pub struct GammaMarket {
     pub best_bid: Option<f64>,
     pub best_ask: Option<f64>,
     pub spread: Option<f64>,
-
     // Nested data
     #[serde(default)]
-    pub events: Vec<GammaEvent>,
+    pub events: Vec<GammaSimplifiedEvent>,
 }
 
 /// Event associated with a market
@@ -120,9 +119,6 @@ pub struct GammaEvent {
     )]
     pub start_time: Option<DateTime<Utc>>,
 
-    // Images
-    pub image: Option<String>,
-    pub icon: Option<String>,
     // Status flags
     #[serde(default)]
     pub active: bool,
