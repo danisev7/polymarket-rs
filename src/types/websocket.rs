@@ -189,6 +189,9 @@ pub struct MakerOrder {
     pub price: Decimal,
     /// Outcome (e.g., "Yes" or "No")
     pub outcome: String,
+    /// Order ID of the maker order (for fill tracking)
+    #[serde(default)]
+    pub order_id: Option<String>,
 }
 
 /// Order status update event
